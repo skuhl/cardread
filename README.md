@@ -6,6 +6,9 @@ The contents of the card are never stored to disk. A hash of the card's contents
 
 The name must also meet some criteria (no digits, some punctuation isn't allowed, must contain a space between first name and last name). The criteria on the name helps prevent a person from accidentally swiping their card at the "enter your name" prompt and having the card contents appear as their name.
 
+## Using the program
+Run swipe.py with Python 3. On Linux or macOS, simply run "python3 swipe.py" on the command line. On Windows, double click swipe.py or run "python swipe.py" from the commandline (assuming Python 3 is installed an in your path).
+
 To exit, press Ctrl+C or kill the program by closing the window. There is no risk of losing data based the program writes data to disk as soon as possible. The name is saved in the database file as soon as they type it in. Information is appended to the attendance file as soon as they swipe their card and the software knows the name to use.
 
 This program is known to work with a card reader such as the Yosoo MSR90.
