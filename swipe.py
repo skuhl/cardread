@@ -48,8 +48,11 @@ def hasNumbers(inputString):
     return any(char.isdigit() for char in inputString)
 
 def validCard(card):
-    """Check if a card is 'valid'. If it is, return a hash of the card. If the card is not valid, return None"""
-    # print("Card: "+card)
+    """Check if a card is 'valid'. If it is, return a hash of the card (we hash the card ourselves so we don't have to worry about storing whatever data is actually on the card. If the card is not valid, return None"""
+    card = card.strip()
+    #print("Card: "+card)
+    #print("Card in hex: " + ":".join("{:02x}".format(ord(c)) for c in card))
+    
     cardLen = len(card)
 
     if re.fullmatch(";.{16}=.{20}\?", card):
@@ -83,32 +86,55 @@ def waitForCard(attempts=0):
 
     print("💳") # unicode card emoji
     card = getpass(prompt="Swipe card now:")
-    # print("Swipe card now.")
-    # card = sys.stdin.readline().strip()
+    card = card.strip()
 
-    # Check if card is valid
-    hex = validCard(card)
-    if hex == None:
+    # On Linux, there is an issue where the first card swipe works
+    # fine, then the second card swipe causes getpass() to only return
+    # part of the card. Here, we wait until the correct number of
+    # characters are present in the input. Note that if someone types
+    # something on the keyboard and then swipes the card, that swipe
+    # won't work. The next swipe should work, however.
+    while len(card) < 39:
+        card = card + getpass(prompt="")
+        card = card.strip()
+
+    # Check if card is valid, get a hash of card so we don't have to
+    # worry about saving the card data directly.
+    hashed = validCard(card)
+
+    # Drop the raw data of the card, we don't need it and don't want
+    # it anymore.
+    del card
+    
+
+    if hashed == None:
         print("🚫") # prohibited emoji
         print("ERROR: Invalid card. Swipe again. Use gold magnetic strip.")
         soundError()
         return waitForCard(attempts+1)
 
-    return card
+    return hashed
 
 
         
 def waitForName():
     """Prompt the user to enter their name. Keep prompting until we consider their name to be valid."""
     soundEnterName()
-    print("🤔")
-    print("Type your name: ")
-    name = sys.stdin.readline().strip()
-    if not validName(name):
-        print("🚫") # prohibited emoji
-        print("ERROR: Enter a valid name. No punctuation or numbers. Enter your first and last name separated by a space.")
-        soundError()
-        return waitForName()
+
+    name = ""
+    while not validName(name):
+        name = ""
+        print("🤔")
+        print("Type name (of person who last swiped their card): ")
+        while len(name) == 0:
+            name = sys.stdin.readline()
+            name = name.strip()
+        if not validName(name):
+            print("🚫") # prohibited emoji
+            print("ERROR: Enter a valid first and last name (separated by a space). No punctuation or numbers.")
+            soundError()
+
+
     return name
 
 def writeDB(db):
