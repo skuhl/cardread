@@ -24,7 +24,11 @@ def playSoundFile(filename):
 
     # Should play wav files on mac or Linux
     import subprocess
-    progs = [ "/usr/bin/afplay", "/usr/bin/play", "/usr/bin/ffplay", "/usr/bin/mplayer" ]
+    # afplay - macOS
+    # aplay - Linux (part of ALSA)
+    # play - Linux (part of sox)
+    # mplayer - Linux (common media player)
+    progs = [ "/usr/bin/afplay", "/usr/bin/aplay", "/usr/bin/play", "/usr/bin/mplayer" ]
 
     for prog in progs:
         if os.path.exists(prog):
