@@ -17,7 +17,7 @@ def playSoundFile(filename):
     # Try to play wav file on windows.
     try:
         import winsound
-        winsound.PlaySound(filename, winsound.SND_ASYNC|winsound.SND_NOSTOP)
+        winsound.PlaySound(filename, winsound.SND_ASYNC)
         return
     except ImportError:
         pass
@@ -48,13 +48,11 @@ def hasNumbers(inputString):
     return any(char.isdigit() for char in inputString)
 
 def validCard(card):
-    """Check if a card is 'valid'. If it is, return a hash of the card (we hash the card ourselves so we don't have to worry about storing whatever data is actually on the card. If the card is not valid, return None"""
+    """Check if a card is 'valid'. If it is, return a hash of the card (we hash the card ourselves so we don't have to worry about storing whatever data is actually on the card). If the card is not valid, return None"""
     card = card.strip()
     #print("Card: "+card)
     #print("Card in hex: " + ":".join("{:02x}".format(ord(c)) for c in card))
     
-    cardLen = len(card)
-
     if re.fullmatch(";.{16}=.{20}\?", card):
         return hashlib.sha1(card.encode("ascii")).hexdigest()
     else:
@@ -155,7 +153,8 @@ def readDB():
         if rows:
             db = { }
             for r in rows:
-                db[r[1]] = r[0]
+                if len(r)==2 and isinstance(r[0],str) and isinstance(r[1],str):
+                    db[r[1]] = r[0]
             return db
         return { }
 
@@ -171,20 +170,20 @@ else:
 attendees = open(outputFilename, "a")
 
 while 1:
-    hex = waitForCard()
+    hashed = waitForCard()
 
     # Add name to database if needed
-    if hex not in db:
+    if hashed not in db:
         print("Welcome new user.")
         name = waitForName()
         
-        db[hex] = name
+        db[hashed] = name
         writeDB(db)
 
-    name = db[hex]
+    name = db[hashed]
 
-    # Add name into today's attendance
-    attendees.write("%s,%s%s" % (name, time.strftime("%-I:%M:%S%p"), os.linesep))
+    # Add name into today's attendance followed by the current time.
+    attendees.write("%s,%s\n" % (name, time.strftime("%X")))
     attendees.flush()
     print("👍") # thumbs up emoji
     print("%s, your attendance has been recorded." % name)
