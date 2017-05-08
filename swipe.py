@@ -11,6 +11,10 @@ import time
 from getpass import getpass
 
 filenameDB = "swipe-db.csv"
+canvasAPI = "https://mtu.instructure.com/api/v1/"
+canvasToken = None
+canvasCourseName = None
+canvasAssignmentName = None
 
 
 def playSoundFile(filename):
@@ -160,9 +164,11 @@ def readDB():
         return { }
 
 
+# Read existing database if it exists.
 db = readDB()
 print("%d cards+names in %s" % (len(db), filenameDB))
 
+# Create a new file to store attendees in. If file exists, append to existing file.
 outputFilename = time.strftime('swipe-attend-%Y%m%d.csv')
 if os.path.exists(outputFilename):
     print("Appending people to the end of %s (which already exists)" % outputFilename)
@@ -170,6 +176,42 @@ else:
     print("Storing people in %s" % outputFilename)
 attendees = open(outputFilename, "a")
 
+
+canvasIntegrationWorks = False
+try:
+    print("")
+    print("Verifying that Canvas integration works...")
+    
+    if canvasToken and canvasAPI and canvasCourseName:
+        import canvas
+        c = canvas.canvas(token=canvasToken, api=canvasAPI)
+        courses = c.getCourses()
+        courseId = c.findCourseId(courses, canvasCourseName)
+        if courseId:
+            print("Found course on Canvas: %s" % canvasCourseName)
+        else:
+            print("Can't find course '%s' on Canvas." % canvasCourseName)
+        
+        c.setDefaultCourseId(courseId)
+        assignments = c.getAssignments()
+        students = c.getStudents()
+        assignmentId = c.findAssignmentId(assignments, canvasAssignmentName)
+        if assignmentId:
+            print("Found assignment on Canvas: %s" % canvasAssignmentName)
+            canvasIntegrationWorks = True
+        else:
+            print("Can't find assignment '%s' in Canvas course." % canvasAssignmentName)
+
+
+except:
+    pass
+
+if canvasIntegrationWorks == False:
+    print("Canvas integration failed. Program will still log attendance to file (but not on Canvas). Any errors immediately above this message are OK.")
+
+
+
+# Main program loop.
 while 1:
     hashed = waitForCard()
 
@@ -177,15 +219,32 @@ while 1:
     if hashed not in db:
         print("Welcome new user.")
         name = waitForName()
-        
+
+        # Add user to database and write it to disk.
         db[hashed] = name
         writeDB(db)
 
+    # Retrieve name from database
     name = db[hashed]
 
-    # Add name into today's attendance followed by the current time.
-    attendees.write("%s,%s\n" % (name, time.strftime("%X")))
+    # Add name into today's attendance file. Name in first column, date and time in second column.
+    loggedTime = time.strftime("%X")
+    attendees.write("%s,%s\n" % (name, loggedTime))
     attendees.flush()
+
+    if canvasIntegrationWorks:
+        try:
+            studentId = c.findStudentId(students, name)
+            if studentId:
+                c.gradeSubmission(courseId=courseId, assignmentId=assignmentId, studentId=studentId, grade=1)
+                # c.commentOnSubmission(courseId=courseId, assignmentId=assignmentId, studentId=studentId, comment="Our card reader software automatically marked you as present because you presented your card to me.")
+            else:
+                print("WARNING: We can't find you on Canvas. We have still logged your attendance into the file.")
+                
+        except:
+            print("WARNING: Something went wrong when we tried to log on Canvas that '%s' was present" % name)
+            pass
+            
     print("👍") # thumbs up emoji
     print("%s, your attendance has been recorded." % name)
     soundSuccess()
