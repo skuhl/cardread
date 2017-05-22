@@ -10,7 +10,7 @@ import time
 # Read card without echoing input to terminal
 from getpass import getpass
 
-filenameDB = "swipe-db.csv"
+filenameDB = "db.csv"
 canvasAPI = "https://mtu.instructure.com/api/v1/"
 canvasToken = None
 canvasCourseName = None
@@ -235,7 +235,7 @@ db = readDB()
 print("%d cards+names in %s" % (len(db), filenameDB))
 
 # Create a new file to store attendees in. If file exists, append to existing file.
-outputFilename = time.strftime('swipe-attend-%Y%m%d.csv')
+outputFilename = time.strftime('attend-%Y%m%d.csv')
 if os.path.exists(outputFilename):
     print("Appending people to the end of %s (which already exists)" % outputFilename)
 else:
