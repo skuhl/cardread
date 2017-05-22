@@ -122,14 +122,14 @@ def waitForCard(attempts=0):
 def waitForName():
     """Prompt the user to enter their name. Keep prompting until we consider their name to be valid."""
     soundEnterName()
-
+    print("Welcome new user.")
+        
     name = ""
     while not validUsername(name):
         name = ""
         print("🤔")
-        print("Type the username of the person who last swiped their card: ")
         while len(name) == 0:
-            name = sys.stdin.readline()
+            name = input("Enter your username: ")
             name = name.strip()
         name = name.lower()  # lowercase the username
         if not validUsername(name):
@@ -163,6 +163,72 @@ def readDB():
             return db
         return { }
 
+class CanvasInfo:
+    c = None          # canvas obj
+    courses = None    # list of courses
+    courseId = None   # course ID of course where grades should go
+    assignments = None  # list of assignments
+    assignmentId = None # assignment ID
+    students = None   # list of students
+
+
+def checkCanvasIntegration():
+    ci = CanvasInfo()
+    
+    try:
+        print("")
+        print("Verifying that Canvas integration works...")
+
+        if canvasToken and canvasAPI and canvasCourseName:
+            import canvas
+            ci.c = canvas.canvas(token=canvasToken, api=canvasAPI)
+            ci.courses = ci.c.getCourses()
+            ci.courseId = ci.c.findCourseId(ci.courses, canvasCourseName)
+            if ci.courseId:
+                print("Found course on Canvas: %s" % canvasCourseName)
+            else:
+                print("Can't find course '%s' on Canvas." % canvasCourseName)
+
+            ci.c.setDefaultCourseId(ci.courseId)
+            ci.assignments = ci.c.getAssignments()
+            ci.students = ci.c.getStudents()
+            ci.assignmentId = ci.c.findAssignmentId(ci.assignments, canvasAssignmentName)
+            if ci.assignmentId:
+                print("Found assignment on Canvas: %s" % canvasAssignmentName)
+                return ci
+            else:
+                print("Can't find assignment '%s' in Canvas course." % canvasAssignmentName)
+
+
+    except:
+        #import traceback
+        #traceback.print_exc()
+        pass
+
+    return None
+
+def gradeOnCanvas(ci, username):
+    """Gives 1 point to the specified user on the canvas assignment. If successful, returns None. Otherwise, returns an error message."""
+    # Update grade on Canvas assignment
+    if ci:
+        try:
+            studentId = ci.c.findStudentId(ci.students, username)
+            if studentId:
+                ci.c.gradeSubmission(courseId=ci.courseId, assignmentId=ci.assignmentId, studentId=studentId, grade=1)
+                # ci.c.commentOnSubmission(courseId=ci.courseId, assignmentId=ci.assignmentId, studentId=studentId, comment="Our card reader software automatically marked you as present because you presented your card to me.")
+                return None
+            else:
+                print("CANVAS ERROR: We can't find you on Canvas. We have still logged your attendance into the file.")
+                return "CANVAS ERROR - USERNAME NOT IN CANVAS COURSE"
+                
+        except:
+            print("CANVAS ERROR: We were unable to record your grade on Canvas. Your attendance record is stored only in the local file.")
+            return "CANVAS ERROR - UNKNOWN ERROR"
+            pass
+    return None
+
+
+
 
 # Read existing database if it exists.
 db = readDB()
@@ -177,37 +243,13 @@ else:
 attendees = open(outputFilename, "a")
 
 
-canvasIntegrationWorks = False
-try:
-    print("")
-    print("Verifying that Canvas integration works...")
-    
-    if canvasToken and canvasAPI and canvasCourseName:
-        import canvas
-        c = canvas.canvas(token=canvasToken, api=canvasAPI)
-        courses = c.getCourses()
-        courseId = c.findCourseId(courses, canvasCourseName)
-        if courseId:
-            print("Found course on Canvas: %s" % canvasCourseName)
-        else:
-            print("Can't find course '%s' on Canvas." % canvasCourseName)
-        
-        c.setDefaultCourseId(courseId)
-        assignments = c.getAssignments()
-        students = c.getStudents()
-        assignmentId = c.findAssignmentId(assignments, canvasAssignmentName)
-        if assignmentId:
-            print("Found assignment on Canvas: %s" % canvasAssignmentName)
-            canvasIntegrationWorks = True
-        else:
-            print("Can't find assignment '%s' in Canvas course." % canvasAssignmentName)
-
-
-except:
-    pass
-
-if canvasIntegrationWorks == False:
+ci = checkCanvasIntegration()
+if ci == None: # if canvas integration fails
     print("Canvas integration failed. Program will still log attendance to file (but not on Canvas). Any errors immediately above this message are OK.")
+    print("To fix the problem, confirm that your canvasToken, canvasAssignmentName, and canvasCourseName are correct.")
+    print("")
+
+    input("Press ENTER to continue without Canvas integration...")
 
 
 
@@ -217,7 +259,6 @@ while 1:
 
     # Add name to database if needed
     if hashed not in db:
-        print("Welcome new user.")
         name = waitForName()
 
         # Add user to database and write it to disk.
@@ -227,24 +268,18 @@ while 1:
     # Retrieve name from database
     name = db[hashed]
 
+    errorMsg = gradeOnCanvas(ci, name)
+
     # Add name into today's attendance file. Name in first column, date and time in second column.
     loggedTime = time.strftime("%X")
-    attendees.write("%s,%s\n" % (name, loggedTime))
+    if errorMsg:
+        attendees.write("%s - %s,%s\n" % (name, errorMsg, loggedTime))
+    else:
+        attendees.write("%s,%s\n" % (name, loggedTime))
     attendees.flush()
 
-    if canvasIntegrationWorks:
-        try:
-            studentId = c.findStudentId(students, name)
-            if studentId:
-                c.gradeSubmission(courseId=courseId, assignmentId=assignmentId, studentId=studentId, grade=1)
-                # c.commentOnSubmission(courseId=courseId, assignmentId=assignmentId, studentId=studentId, comment="Our card reader software automatically marked you as present because you presented your card to me.")
-            else:
-                print("WARNING: We can't find you on Canvas. We have still logged your attendance into the file.")
-                
-        except:
-            print("WARNING: Something went wrong when we tried to log on Canvas that '%s' was present" % name)
-            pass
-            
+
+        
     print("👍") # thumbs up emoji
     print("%s, your attendance has been recorded." % name)
     soundSuccess()
