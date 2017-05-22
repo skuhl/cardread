@@ -13,8 +13,8 @@ from getpass import getpass
 filenameDB = "db.csv"
 canvasAPI = "https://mtu.instructure.com/api/v1/"
 canvasToken = None
-canvasCourseName = None
-canvasAssignmentName = None
+canvasCourseName = "HGD - Temporary Summer 2017"
+canvasAssignmentName = "Attendance (Week 1)"
 
 
 def playSoundFile(filename):
@@ -219,11 +219,11 @@ def gradeOnCanvas(ci, username):
                 return None
             else:
                 print("CANVAS ERROR: We can't find you on Canvas. We have still logged your attendance into the file.")
-                return "CANVAS ERROR - USERNAME NOT IN CANVAS COURSE"
+                return "Username not in Canvas course"
                 
         except:
             print("CANVAS ERROR: We were unable to record your grade on Canvas. Your attendance record is stored only in the local file.")
-            return "CANVAS ERROR - UNKNOWN ERROR"
+            return "Unknown error"
             pass
     return None
 
@@ -268,16 +268,17 @@ while 1:
     # Retrieve name from database
     name = db[hashed]
 
-    errorMsg = gradeOnCanvas(ci, name)
-
-    # Add name into today's attendance file. Name in first column, date and time in second column.
+    # Store entry in local file. Name in first column. Time in second column.
+    # We write to disk immediately in case Canvas grading causes delay and user types Ctrl+C.
     loggedTime = time.strftime("%X")
-    if errorMsg:
-        attendees.write("%s - %s,%s\n" % (name, errorMsg, loggedTime))
-    else:
-        attendees.write("%s,%s\n" % (name, loggedTime))
+    attendees.write("%s,%s\n" % (name, loggedTime))
     attendees.flush()
 
+    errorMsg = gradeOnCanvas(ci, name)
+    # If we notice a Canvas error, report the error in the file.
+    if errorMsg:
+        attendees.write("CANVAS ERROR FOR PREVIOUS ATTENDEE: %s - %s, %s\n" % (name, errorMsg, loggedTime))
+        attendees.flush()
 
         
     print("👍") # thumbs up emoji
