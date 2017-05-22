@@ -44,13 +44,13 @@ def playSoundFile(filename):
             return
 
 def soundSuccess():
-    playSoundFile("swipe-success.wav")
+    playSoundFile("success.wav")
     
 def soundError():
-    playSoundFile("swipe-error.wav")
+    playSoundFile("error.wav")
 
 def soundEnterName():
-    playSoundFile("swipe-boing.wav")
+    playSoundFile("boing.wav")
         
 
 def validCard(card):
