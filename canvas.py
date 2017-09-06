@@ -96,19 +96,20 @@ class canvas():
                 urlString = self.CANVAS_API+url
             else:
                 urlString = url
-        
-            print("Putting: " +urlString)
+            
+            #print("Putting: " +urlString)
             request = urllib.request.Request(urlString, method='PUT')
             request.add_header("Authorization", "Bearer " + self.CANVAS_TOKEN);
             response = urllib.request.urlopen(request)
-            #print(response.readall().decode('utf-8'))
-            # json_string = response.readall().decode('utf-8');
-            # retVal = json.loads(json_string)
+            json_string = response.read().decode('utf-8');
+            retVal = dict(json.loads(json_string))
+            #print (retVal)
             if(response.status == 200):
                 return True
             else:
                 return False
-        except:
+        except Exception as ex:
+            print(ex)
             e = sys.exc_info()[0]
             print(e)
             raise
@@ -121,7 +122,8 @@ class canvas():
         """Gets course objects"""
         allCourses = self.makeRequest("courses?"+
                                       urllib.parse.urlencode({"per_page":"100",
-                                                              "page": "1"}))
+                                                              "page": "1"})) 
+        #self.prettyPrint(allCourses)
         return allCourses
 
     def getStudents(self, courseId=None):
@@ -133,6 +135,7 @@ class canvas():
         students =  self.makeRequest("courses/"+str(courseId)+"/students?"+
                                      urllib.parse.urlencode({"per_page":"100",
                                                              "page": "1"}))
+        #self.prettyPrint(students)
 	# Filter out students who are still "pending".
 	# These "pending" students do not have a login_id, which some of this code relies on
         nonPendingStudents = []
@@ -148,6 +151,7 @@ class canvas():
         allAssignments = self.makeRequest("courses/"+str(courseId)+"/assignments?"+
                                           urllib.parse.urlencode({"per_page":"100",
                                                                   "page": "1"}))
+        #self.prettyPrint(allAssignments)
         return allAssignments
 
     def commentOnSubmission(self, courseId, assignmentId, studentId, comment):
@@ -225,12 +229,15 @@ class canvas():
         #self.prettyPrint(students)
         #exit(1)
         for s in students:
-            if s['name'].lower()          == searchString or \
-               s['short_name'].lower()    == searchString or \
-               s['sortable_name'].lower() == searchString or \
-               s['login_id'].lower()      == searchString or \
-               str(s['id']) == searchString:
-                return s
+            try:
+                if s['name'].lower()          == searchString or \
+                s['short_name'].lower()    == searchString or \
+                s['sortable_name'].lower() == searchString or \
+                s['login_id'].lower()      == searchString or \
+                str(s['id']) == searchString:
+                    return s
+            except:
+                print("ProblemStudent:"+s)
 
         # print("Failed to find student: " + searchString)
         return None
@@ -239,18 +246,24 @@ class canvas():
         """Returns an assignment object that matches the assignment name out of a list of assignment objects."""
         searchString = searchString.lower()
         for a in assignments:
-            if a['name'].lower() == searchString or \
-               str(a['id']) == searchString:
-                return a
+            try:
+                if a['name'].lower() == searchString or \
+                str(a['id']) == searchString:
+                    return a
+            except:
+                pass
         return None
 
     def findCourse(self, courses, searchString):
         """Returns an course object that matches the course name out of a list of course objects."""
         searchString = searchString.lower()
         for c in courses:
-            if c['name'].lower() == searchString or \
-               str(c['id'])      == searchString:
-                return c
+            try:
+                if c['name'].lower() == searchString or \
+                str(c['id'])      == searchString:
+                    return c
+            except:
+                pass
         return None
 
     def findStudentId(self, students, searchString):
