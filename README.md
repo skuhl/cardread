@@ -4,7 +4,7 @@ This program, when used with a card reader, logs the usernames of people who hav
 
 The contents of the card are never stored to disk. A hash of the card's contents is stored to disk instead.
 
-The username must also meet some criteria (no digits, some punctuation isn't allowed). The criteria on the username prevents a person from accidentally having the contents of their card appear as their name (this mistake is easy to make since the card reader acts as a keyboard).
+The username must also meet some criteria (must not appear to be a card, some punctuation isn't allowed, etc.). The criteria on the username prevents a person from accidentally having the contents of their card appear as their name (this mistake is easy to make since the card reader acts as a keyboard).
 
 ## Canvas integration
 You may wish to use a 1 point Canvas assignment for each expected date of attendance. cardread integrates with Canvas and can automatically give 1 point to each person in attendance when they present their card. To do this, you will need to update several things at the top of the cardread.py program:
